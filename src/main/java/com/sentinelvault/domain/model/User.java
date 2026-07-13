@@ -15,9 +15,10 @@ import java.util.UUID;
 public class User {
 
     private UUID id;
-    private String username;
+    private String fullName;
     private String email;
     private String password;
+    private boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

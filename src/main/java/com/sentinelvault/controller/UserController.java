@@ -25,19 +25,18 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<User> register(@Valid @RequestBody UserRegisterRequest request) {
-        // Adaptando o DTO de entrada para o Modelo de Domínio Puro antes de chamar o Service
         User newUserDomain = new User(
                 null,
-                request.username(),
+                request.fullName(),
                 request.email(),
                 request.password(),
+                true,
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
 
         User registeredUser = userService.registerUser(newUserDomain);
 
-        // Retorna HTTP Status 211 (Created) e o corpo do usuário criado
         return ResponseEntity.status(HttpStatus.CREATED).body(registeredUser);
     }
 }

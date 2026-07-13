@@ -2,33 +2,23 @@ package com.sentinelvault.domain.service;
 
 import com.sentinelvault.domain.exception.BusinessException;
 import com.sentinelvault.domain.model.User;
-import com.sentinelvault.mapper.UserMapper;
-import com.sentinelvault.repository.UserRepository;
-import com.sentinelvault.repository.entity.UserEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class UserService {
 
-    private final UserRepository userRepository;
-    private final UserMapper userMapper;
+    private final ConcurrentHashMap<String, User> memoryDatabase = new ConcurrentHashMap<>();
 
-    public UserService(UserRepository userRepository, UserMapper userMapper) {
-        this.userRepository = userRepository;
-        this.userMapper = userMapper;
-    }
-
-    @Transactional
     public User registerUser(User user) {
-        if (userRepository.existsByEmail(user.getEmail())) {
+        if (memoryDatabase.containsKey(user.getEmail())) {
             throw new BusinessException("Email address is already registered.");
         }
 
-        UserEntity entityToSave = userMapper.toEntity(user);
+        user.setId(UUID.randomUUID());
+        memoryDatabase.put(user.getEmail(), user);
 
-        UserEntity savedEntity = userRepository.save(entityToSave);
-
-        return userMapper.toDomain(savedEntity);
+        return user;
     }
 }
