@@ -3,6 +3,7 @@ target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+*.HTTP
 
 ### STS ###
 .apt_generated
@@ -13,13 +14,12 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
+# IDEs e Ferramentas
+.idea/
+.vscode/
 *.iws
 *.iml
 *.ipr
-
-### NetBeans ###
 /nbproject/private/
 /nbbuild/
 /dist/
@@ -29,5 +29,16 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### VS Code ###
-.vscode/
+# Arquivos do Sistema Operacional
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Configurações de Ambiente e Segredos
+.env
+*.log
+
+# Arquivos do Maven Wrapper (Opcional, mas limpa o repositório)
+.mvn/
+mvnw
+mvnw.cmd
