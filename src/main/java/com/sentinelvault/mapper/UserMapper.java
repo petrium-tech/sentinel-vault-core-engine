@@ -1,16 +1,19 @@
 package com.sentinelvault.mapper;
 
+import com.sentinelvault.controller.dto.UserRegistrationRequest;
+import com.sentinelvault.controller.dto.UserResponse;
 import com.sentinelvault.domain.model.User;
 import com.sentinelvault.repository.entity.UserEntity;
 import org.mapstruct.Mapper;
-import org.mapstruct.factory.Mappers;
 
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
-    UserMapper INSTANCE = Mappers.getMapper(UserMapper.class);
+    User toDomain(UserRegistrationRequest request);
 
-    User toDomain(UserEntity entity);
+    UserResponse toResponse(User domain);
 
     UserEntity toEntity(User domain);
+
+    User toDomain(UserEntity entity);
 }

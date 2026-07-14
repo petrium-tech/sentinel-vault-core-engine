@@ -1,42 +1,33 @@
 package com.sentinelvault.controller;
 
-import com.sentinelvault.controller.dto.UserRegisterRequest;
+import com.sentinelvault.controller.dto.UserRegistrationRequest;
+import com.sentinelvault.controller.dto.UserResponse;
 import com.sentinelvault.domain.model.User;
 import com.sentinelvault.domain.service.UserService;
+import com.sentinelvault.mapper.UserMapper;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.time.LocalDateTime;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/api/users")
 public class UserController {
 
     private final UserService userService;
+    private final UserMapper userMapper;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, UserMapper userMapper) {
         this.userService = userService;
+        this.userMapper = userMapper;
     }
 
     @PostMapping
-    public ResponseEntity<User> register(@Valid @RequestBody UserRegisterRequest request) {
-        User newUserDomain = new User(
-                null,
-                request.fullName(),
-                request.email(),
-                request.password(),
-                true,
-                LocalDateTime.now(),
-                LocalDateTime.now()
-        );
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody UserRegistrationRequest request) {
+        User userDomain = userMapper.toDomain(request);
+        User registeredUser = userService.registerUser(userDomain);
+        UserResponse responseBody = userMapper.toResponse(registeredUser);
 
-        User registeredUser = userService.registerUser(newUserDomain);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(registeredUser);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseBody);
     }
 }
