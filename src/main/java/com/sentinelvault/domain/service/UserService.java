@@ -5,6 +5,7 @@ import com.sentinelvault.domain.model.User;
 import com.sentinelvault.mapper.UserMapper;
 import com.sentinelvault.repository.UserRepository;
 import com.sentinelvault.repository.entity.UserEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,10 +14,12 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, UserMapper userMapper) {
+    public UserService(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
@@ -24,6 +27,9 @@ public class UserService {
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new BusinessException("Email address is already registered.");
         }
+
+        String encryptedPassword = passwordEncoder.encode(user.getPassword());
+        user.setPassword(encryptedPassword);
 
         UserEntity entityToSave = userMapper.toEntity(user);
         UserEntity savedEntity = userRepository.save(entityToSave);
