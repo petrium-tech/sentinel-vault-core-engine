@@ -5,6 +5,7 @@ import com.sentinelvault.domain.model.User;
 import com.sentinelvault.mapper.UserMapper;
 import com.sentinelvault.repository.UserRepository;
 import com.sentinelvault.repository.entity.UserEntity;
+import com.sentinelvault.security.JwtService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,42 +14,48 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final UserMapper userMapper;
 
-    public UserService(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService, UserMapper userMapper) {
         this.userRepository = userRepository;
-        this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.userMapper = userMapper;
     }
 
     @Transactional
     public User registerUser(User user) {
-        if (userRepository.existsByEmail(user.getEmail())) {
-            throw new BusinessException("Email address is already registered.");
+        // 1. Valida se o e-mail já está cadastrado no banco
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            throw new BusinessException("Email already registered.");
         }
 
+        // 2. Criptografa a senha do domínio usando o BCryptEncoder
         String encryptedPassword = passwordEncoder.encode(user.getPassword());
-        user.setPassword(encryptedPassword);
 
-        UserEntity entityToSave = userMapper.toEntity(user);
-        UserEntity savedEntity = userRepository.save(entityToSave);
+        // 3. Converte o modelo de domínio para a entidade JPA física do banco
+        UserEntity entity = userMapper.toEntity(user);
+        entity.setPasswordHash(encryptedPassword); // Define a senha criptografada na coluna física
 
+        // 4. Salva no PostgreSQL do Docker
+        UserEntity savedEntity = userRepository.save(entity);
+
+        // 5. Retorna o domínio salvo de volta para o controlador
         return userMapper.toDomain(savedEntity);
     }
 
     @Transactional(readOnly = true)
-    public String authenticateUser(String email, String password) {
-        // Busca o usuário no banco de dados do Docker pelo e-mail
-        UserEntity entity = userRepository.findByEmail(email)
+    public String login(String email, String password) {
+        UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException("Invalid email or password."));
 
-        // Compara de forma segura a senha aberta enviada com a hash criptografada
-        if (!passwordEncoder.matches(password, entity.getPasswordHash())) {
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new BusinessException("Invalid email or password.");
         }
 
-        // Retorna um token simulado por enquanto (nas próximas etapas geraremos um JWT real)
-        return "mock-jwt-token-for-" + entity.getEmail();
+        // Emite um JWT real e seguro assinado criptograficamente!
+        return jwtService.generateToken(user.getEmail());
     }
 }

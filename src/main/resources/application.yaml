@@ -22,5 +22,9 @@ server:
 
 sentinel:
   security:
-    # Chave simétrica real de 256 bits (32 bytes) codificada em Base64
     crypto-key: "YTM0N2M5ZjgxYjIyYzM0ZDVkNmU3YThmOTBlYTIxY2Q="
+    jwt:
+      # Chave secreta de 256 bits codificada em Base64 para assinatura dos tokens
+      secret: "dGhpcy1pcy1hLXN1cGVyLXNlY3VyZS1hbmQtb25lLW9mLWEta2luZC1zZWNyZXQta2V5LTI1Ni1iaXRz"
+      # Tempo de validade do token em milissegundos (Ex: 3600000 ms = 1 hora)
+      expiration: 3600000
