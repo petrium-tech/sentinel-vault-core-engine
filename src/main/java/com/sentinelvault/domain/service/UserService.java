@@ -36,4 +36,19 @@ public class UserService {
 
         return userMapper.toDomain(savedEntity);
     }
+
+    @Transactional(readOnly = true)
+    public String authenticateUser(String email, String password) {
+        // Busca o usuário no banco de dados do Docker pelo e-mail
+        UserEntity entity = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("Invalid email or password."));
+
+        // Compara de forma segura a senha aberta enviada com a hash criptografada
+        if (!passwordEncoder.matches(password, entity.getPasswordHash())) {
+            throw new BusinessException("Invalid email or password.");
+        }
+
+        // Retorna um token simulado por enquanto (nas próximas etapas geraremos um JWT real)
+        return "mock-jwt-token-for-" + entity.getEmail();
+    }
 }
