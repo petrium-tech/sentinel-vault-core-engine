@@ -19,3 +19,8 @@ spring:
 
 server:
   port: 9090
+
+sentinel:
+  security:
+    # Chave simétrica real de 256 bits (32 bytes) codificada em Base64
+    crypto-key: "YTM0N2M5ZjgxYjIyYzM0ZDVkNmU3YThmOTBlYTIxY2Q="
