@@ -8,6 +8,7 @@ import com.sentinelvault.repository.entity.UserEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -41,5 +42,24 @@ public class CredentialService {
         entity.setUser(user);
 
         return credentialRepository.save(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CredentialEntity> findCredentialsByUserId(UUID userId) {
+        // 1. Garante que o usuário existe antes de listar
+        if (!userRepository.existsById(userId)) {
+            throw new BusinessException("User not found.");
+        }
+
+        // 2. Busca todas as credenciais cifradas pertencentes a este usuário
+        List<CredentialEntity> credentials = credentialRepository.findByUserId(userId);
+
+        // 3. Percorre cada credencial e descriptografa o payload da senha em tempo de execução
+        credentials.forEach(entity -> {
+            String decryptedPassword = cryptoService.decrypt(entity.getPasswordPayload());
+            entity.setPasswordPayload(decryptedPassword); // Substitui temporariamente em memória para o transporte seguro
+        });
+
+        return credentials;
     }
 }

@@ -9,6 +9,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/credentials")
 public class CredentialController {
@@ -39,5 +42,23 @@ public class CredentialController {
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<CredentialResponse>> listByUserId(@PathVariable UUID userId) {
+        java.util.List<CredentialEntity> credentials = credentialService.findCredentialsByUserId(userId);
+
+        // Converte a lista de entidades descriptografadas para DTOs de resposta de forma limpa
+        java.util.List<CredentialResponse> response = credentials.stream()
+                .map(entity -> new CredentialResponse(
+                        entity.getId(),
+                        entity.getName(),
+                        entity.getServiceUrl(),
+                        entity.getUsernamePayload(),
+                        entity.getPasswordPayload() // Aqui já vai o dado descriptografado
+                ))
+                .toList();
+
+        return ResponseEntity.ok(response);
     }
 }
