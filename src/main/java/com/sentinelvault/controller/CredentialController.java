@@ -7,10 +7,10 @@ import com.sentinelvault.repository.entity.CredentialEntity;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/credentials")
@@ -23,39 +23,40 @@ public class CredentialController {
     }
 
     @PostMapping
-    public ResponseEntity<CredentialResponse> create(@Valid @RequestBody CredentialRegistrationRequest request) {
+    public ResponseEntity<CredentialResponse> create(
+            @Valid @RequestBody CredentialRegistrationRequest request,
+            @AuthenticationPrincipal String userEmail) { // Injeção automática via Spring Security
+
         CredentialEntity savedEntity = credentialService.registerCredential(
                 request.getName(),
                 request.getServiceUrl(),
                 request.getUsernamePayload(),
                 request.getPasswordPayload(),
-                request.getUserId()
+                userEmail
         );
 
-        // Mapeamos manualmente a resposta para devolver o objeto limpo
         CredentialResponse response = new CredentialResponse(
                 savedEntity.getId(),
                 savedEntity.getName(),
                 savedEntity.getServiceUrl(),
                 savedEntity.getUsernamePayload(),
-                request.getPasswordPayload() // Retornamos o texto aberto para o usuário que acabou de cadastrar
+                request.getPasswordPayload() // Retorna o texto aberto confirmado no ato da criação
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<CredentialResponse>> listByUserId(@PathVariable UUID userId) {
-        java.util.List<CredentialEntity> credentials = credentialService.findCredentialsByUserId(userId);
+    @GetMapping
+    public ResponseEntity<List<CredentialResponse>> listCurrentUserCredentials(@AuthenticationPrincipal String userEmail) {
+        List<CredentialEntity> credentials = credentialService.findCredentialsByUserEmail(userEmail);
 
-        // Converte a lista de entidades descriptografadas para DTOs de resposta de forma limpa
-        java.util.List<CredentialResponse> response = credentials.stream()
+        List<CredentialResponse> response = credentials.stream()
                 .map(entity -> new CredentialResponse(
                         entity.getId(),
                         entity.getName(),
                         entity.getServiceUrl(),
                         entity.getUsernamePayload(),
-                        entity.getPasswordPayload() // Aqui já vai o dado descriptografado
+                        entity.getPasswordPayload() // Dado descriptografado on-the-fly
                 ))
                 .toList();
 

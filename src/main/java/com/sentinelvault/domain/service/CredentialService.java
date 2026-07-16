@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class CredentialService {
@@ -25,9 +24,9 @@ public class CredentialService {
     }
 
     @Transactional
-    public CredentialEntity registerCredential(String name, String serviceUrl, String username, String plainPassword, UUID userId) {
-        // 1. Busca o usuário dono da credencial no banco
-        UserEntity user = userRepository.findById(userId)
+    public CredentialEntity registerCredential(String name, String serviceUrl, String username, String plainPassword, String userEmail) {
+        // 1. Busca o usuário dono de forma blindada utilizando o e-mail extraído do JWT
+        UserEntity user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException("User owner not found."));
 
         // 2. Executa a criptografia simétrica AES-256-GCM na senha do segredo
@@ -38,26 +37,25 @@ public class CredentialService {
         entity.setName(name);
         entity.setServiceUrl(serviceUrl);
         entity.setUsernamePayload(username);
-        entity.setPasswordPayload(encryptedPassword); // Grava a senha criptografada (Ciphertext)
+        entity.setPasswordPayload(encryptedPassword); // Grava o texto cifrado (Ciphertext)
         entity.setUser(user);
 
         return credentialRepository.save(entity);
     }
 
     @Transactional(readOnly = true)
-    public List<CredentialEntity> findCredentialsByUserId(UUID userId) {
-        // 1. Garante que o usuário existe antes de listar
-        if (!userRepository.existsById(userId)) {
-            throw new BusinessException("User not found.");
-        }
+    public List<CredentialEntity> findCredentialsByUserEmail(String userEmail) {
+        // 1. Garante que o usuário existe buscando pelo e-mail do JWT
+        UserEntity user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new BusinessException("User not found."));
 
-        // 2. Busca todas as credenciais cifradas pertencentes a este usuário
-        List<CredentialEntity> credentials = credentialRepository.findByUserId(userId);
+        // 2. Busca todas as credenciais cifradas pertencentes a este ID de usuário
+        List<CredentialEntity> credentials = credentialRepository.findByUserId(user.getId());
 
-        // 3. Percorre cada credencial e descriptografa o payload da senha em tempo de execução
+        // 3. Descriptografa o payload da senha em tempo de execução para cada registro
         credentials.forEach(entity -> {
             String decryptedPassword = cryptoService.decrypt(entity.getPasswordPayload());
-            entity.setPasswordPayload(decryptedPassword); // Substitui temporariamente em memória para o transporte seguro
+            entity.setPasswordPayload(decryptedPassword); // Substituição segura em memória
         });
 
         return credentials;

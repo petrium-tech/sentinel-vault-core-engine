@@ -1,9 +1,7 @@
 package com.sentinelvault.controller.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import java.util.UUID;
 
 public class CredentialRegistrationRequest {
 
@@ -19,18 +17,14 @@ public class CredentialRegistrationRequest {
     @NotBlank(message = "Password or secret payload is required.")
     private String passwordPayload;
 
-    @NotNull(message = "User owner ID is required.")
-    private UUID userId; // Por enquanto, enviamos explicitamente até termos a sessão via JWT completo
-
     public CredentialRegistrationRequest() {
     }
 
-    public CredentialRegistrationRequest(String name, String serviceUrl, String usernamePayload, String passwordPayload, UUID userId) {
+    public CredentialRegistrationRequest(String name, String serviceUrl, String usernamePayload, String passwordPayload) {
         this.name = name;
         this.serviceUrl = serviceUrl;
         this.usernamePayload = usernamePayload;
         this.passwordPayload = passwordPayload;
-        this.userId = userId;
     }
 
     // Getters e Setters
@@ -64,13 +58,5 @@ public class CredentialRegistrationRequest {
 
     public void setPasswordPayload(String passwordPayload) {
         this.passwordPayload = passwordPayload;
-    }
-
-    public UUID getUserId() {
-        return userId;
-    }
-
-    public void setUserId(UUID userId) {
-        this.userId = userId;
     }
 }
