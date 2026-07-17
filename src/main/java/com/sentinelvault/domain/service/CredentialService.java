@@ -33,12 +33,15 @@ public class CredentialService {
     }
 
     @Transactional
-    public CredentialEntity registerCredential(String name, String serviceUrl, String username, String plainPassword, String userEmail) {
+    public CredentialEntity registerCredential(String name, String serviceUrl, String username, String plainPassword, String userEmail, String ipAddress, String userAgent) {
+        // Busca o usuário dono de forma blindada utilizando o e-mail extraído do JWT [cite: 2079]
         UserEntity user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException("User owner not found."));
 
+        // Executa a criptografia simétrica AES-256-GCM na senha do segredo [cite: 2215]
         String encryptedPassword = cryptoService.encrypt(plainPassword);
 
+        // Monta e persiste a entidade no PostgreSQL
         CredentialEntity entity = new CredentialEntity();
         entity.setName(name);
         entity.setServiceUrl(serviceUrl);
@@ -48,10 +51,13 @@ public class CredentialService {
 
         CredentialEntity savedCredential = credentialRepository.save(entity);
 
+        // DevSecOps: Registra a auditoria contendo a telemetria do contexto de rede
         CredentialAuditLogEntity auditLog = new CredentialAuditLogEntity(
                 savedCredential.getId(),
                 user.getId(),
-                "CREATE"
+                "CREATE",
+                ipAddress,
+                userAgent
         );
         auditLogRepository.save(auditLog);
 
@@ -59,24 +65,26 @@ public class CredentialService {
     }
 
     @Transactional
-    public Page<CredentialEntity> findCredentialsByUserEmail(String userEmail, Pageable pageable) {
-        // 1. Garante que o usuário existe buscando pelo e-mail do JWT
+    public Page<CredentialEntity> findCredentialsByUserEmail(String userEmail, Pageable pageable, String ipAddress, String userAgent) {
+        // Garante que o usuário existe buscando pelo e-mail do JWT [cite: 2079]
         UserEntity user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException("User not found."));
 
-        // 2. Busca o bloco paginado de credenciais cifradas pertencentes a este ID de usuário
+        // Busca o bloco paginado de credenciais cifradas pertencentes a este ID de usuário [cite: 2225]
         Page<CredentialEntity> credentialsPage = credentialRepository.findByUserId(user.getId(), pageable);
 
-        // 3. Descriptografa o payload da senha em tempo de execução e dispara a auditoria para cada uma encontrada na página
+        // Descriptografa o payload da senha em tempo de execução e dispara a auditoria para cada uma encontrada na página [cite: 2225]
         credentialsPage.forEach(entity -> {
             String decryptedPassword = cryptoService.decrypt(entity.getPasswordPayload());
             entity.setPasswordPayload(decryptedPassword);
 
-            // 4. Auditoria persistente
+            // DevSecOps: Auditoria persistente enriquecida com IP e User-Agent do solicitante
             CredentialAuditLogEntity auditLog = new CredentialAuditLogEntity(
                     entity.getId(),
                     user.getId(),
-                    "READ_DECRYPT"
+                    "READ_DECRYPT",
+                    ipAddress,
+                    userAgent
             );
             auditLogRepository.save(auditLog);
         });
@@ -85,23 +93,29 @@ public class CredentialService {
     }
 
     @Transactional
-    public void deleteCredential(UUID credentialId, String userEmail) {
+    public void deleteCredential(UUID credentialId, String userEmail, String ipAddress, String userAgent) {
+        // Garante que o usuário logado existe
         UserEntity user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException("User not found."));
 
+        // Busca a credencial ativa. Se já estiver deletada logicamente, o Hibernate não vai achar por causa do @SQLRestriction
         CredentialEntity credential = credentialRepository.findById(credentialId)
                 .orElseThrow(() -> new BusinessException("Credential not found or already deleted."));
 
+        // Validação de Segurança: Garante que o usuário só pode deletar o que é dele
         if (!credential.getUser().getId().equals(user.getId())) {
             throw new BusinessException("You do not have permission to delete this credential.");
         }
 
         credentialRepository.delete(credential);
 
+        // DevSecOps: Preserva o rastro detalhado de rede de quem comandou a remoção do segredo
         CredentialAuditLogEntity auditLog = new CredentialAuditLogEntity(
                 credentialId,
                 user.getId(),
-                "DELETE_SOFT"
+                "DELETE_SOFT",
+                ipAddress,
+                userAgent
         );
         auditLogRepository.save(auditLog);
     }
