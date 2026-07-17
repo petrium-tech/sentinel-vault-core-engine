@@ -1,8 +1,10 @@
 package com.sentinelvault.domain.service;
 
 import com.sentinelvault.domain.exception.BusinessException;
+import com.sentinelvault.repository.CredentialAuditLogRepository;
 import com.sentinelvault.repository.CredentialRepository;
 import com.sentinelvault.repository.UserRepository;
+import com.sentinelvault.repository.entity.CredentialAuditLogEntity;
 import com.sentinelvault.repository.entity.CredentialEntity;
 import com.sentinelvault.repository.entity.UserEntity;
 import org.springframework.stereotype.Service;
@@ -16,11 +18,16 @@ public class CredentialService {
     private final CredentialRepository credentialRepository;
     private final UserRepository userRepository;
     private final CryptoService cryptoService;
+    private final CredentialAuditLogRepository auditLogRepository;
 
-    public CredentialService(CredentialRepository credentialRepository, UserRepository userRepository, CryptoService cryptoService) {
+    public CredentialService(CredentialRepository credentialRepository,
+                             UserRepository userRepository,
+                             CryptoService cryptoService,
+                             CredentialAuditLogRepository auditLogRepository) {
         this.credentialRepository = credentialRepository;
         this.userRepository = userRepository;
         this.cryptoService = cryptoService;
+        this.auditLogRepository = auditLogRepository;
     }
 
     @Transactional
@@ -40,10 +47,20 @@ public class CredentialService {
         entity.setPasswordPayload(encryptedPassword); // Grava o texto cifrado (Ciphertext)
         entity.setUser(user);
 
-        return credentialRepository.save(entity);
+        CredentialEntity savedCredential = credentialRepository.save(entity);
+
+        // 4. Auditoria: Registra que uma nova credencial foi criada
+        CredentialAuditLogEntity auditLog = new CredentialAuditLogEntity(
+                savedCredential.getId(),
+                user.getId(),
+                "CREATE"
+        );
+        auditLogRepository.save(auditLog);
+
+        return savedCredential;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<CredentialEntity> findCredentialsByUserEmail(String userEmail) {
         // 1. Garante que o usuário existe buscando pelo e-mail do JWT
         UserEntity user = userRepository.findByEmail(userEmail)
@@ -52,10 +69,18 @@ public class CredentialService {
         // 2. Busca todas as credenciais cifradas pertencentes a este ID de usuário
         List<CredentialEntity> credentials = credentialRepository.findByUserId(user.getId());
 
-        // 3. Descriptografa o payload da senha em tempo de execução para cada registro
+        // 3. Descriptografa o payload da senha em tempo de execução e dispara a auditoria para cada uma
         credentials.forEach(entity -> {
             String decryptedPassword = cryptoService.decrypt(entity.getPasswordPayload());
             entity.setPasswordPayload(decryptedPassword); // Substituição segura em memória
+
+            // 4. Auditoria: Grava de forma persistente quem leu/descriptografou este segredo específico
+            CredentialAuditLogEntity auditLog = new CredentialAuditLogEntity(
+                    entity.getId(),
+                    user.getId(),
+                    "READ_DECRYPT"
+            );
+            auditLogRepository.save(auditLog);
         });
 
         return credentials;
