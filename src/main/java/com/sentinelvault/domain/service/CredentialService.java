@@ -7,11 +7,12 @@ import com.sentinelvault.repository.UserRepository;
 import com.sentinelvault.repository.entity.CredentialAuditLogEntity;
 import com.sentinelvault.repository.entity.CredentialEntity;
 import com.sentinelvault.repository.entity.UserEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID; // IMPORT CORRETO ADICIONADO AQUI
+import java.util.UUID;
 
 @Service
 public class CredentialService {
@@ -58,16 +59,20 @@ public class CredentialService {
     }
 
     @Transactional
-    public List<CredentialEntity> findCredentialsByUserEmail(String userEmail) {
+    public Page<CredentialEntity> findCredentialsByUserEmail(String userEmail, Pageable pageable) {
+        // 1. Garante que o usuário existe buscando pelo e-mail do JWT
         UserEntity user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new BusinessException("User not found."));
 
-        List<CredentialEntity> credentials = credentialRepository.findByUserId(user.getId());
+        // 2. Busca o bloco paginado de credenciais cifradas pertencentes a este ID de usuário
+        Page<CredentialEntity> credentialsPage = credentialRepository.findByUserId(user.getId(), pageable);
 
-        credentials.forEach(entity -> {
+        // 3. Descriptografa o payload da senha em tempo de execução e dispara a auditoria para cada uma encontrada na página
+        credentialsPage.forEach(entity -> {
             String decryptedPassword = cryptoService.decrypt(entity.getPasswordPayload());
             entity.setPasswordPayload(decryptedPassword);
 
+            // 4. Auditoria persistente
             CredentialAuditLogEntity auditLog = new CredentialAuditLogEntity(
                     entity.getId(),
                     user.getId(),
@@ -76,7 +81,7 @@ public class CredentialService {
             auditLogRepository.save(auditLog);
         });
 
-        return credentials;
+        return credentialsPage;
     }
 
     @Transactional

@@ -5,13 +5,14 @@ import com.sentinelvault.controller.dto.CredentialResponse;
 import com.sentinelvault.domain.service.CredentialService;
 import com.sentinelvault.repository.entity.CredentialEntity;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID; // IMPORT CORRETO ADICIONADO AQUI
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/credentials")
@@ -48,20 +49,21 @@ public class CredentialController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CredentialResponse>> listCurrentUserCredentials(@AuthenticationPrincipal String userEmail) {
-        List<CredentialEntity> credentials = credentialService.findCredentialsByUserEmail(userEmail);
+    public ResponseEntity<Page<CredentialResponse>> listCurrentUserCredentials(
+            @AuthenticationPrincipal String userEmail,
+            Pageable pageable) {
 
-        List<CredentialResponse> response = credentials.stream()
-                .map(entity -> new CredentialResponse(
-                        entity.getId(),
-                        entity.getName(),
-                        entity.getServiceUrl(),
-                        entity.getUsernamePayload(),
-                        entity.getPasswordPayload()
-                ))
-                .toList();
+        Page<CredentialEntity> credentialsPage = credentialService.findCredentialsByUserEmail(userEmail, pageable);
 
-        return ResponseEntity.ok(response);
+        Page<CredentialResponse> responsePage = credentialsPage.map(entity -> new CredentialResponse(
+                entity.getId(),
+                entity.getName(),
+                entity.getServiceUrl(),
+                entity.getUsernamePayload(),
+                entity.getPasswordPayload()
+        ));
+
+        return ResponseEntity.ok(responsePage);
     }
 
     @DeleteMapping("/{id}")
