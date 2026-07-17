@@ -10,7 +10,6 @@ spring:
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
-    # ALTERADO: Mudamos de 'update' para 'validate' para que o Flyway controle a estrutura física
     hibernate:
       ddl-auto: validate
     show-sql: true
@@ -18,7 +17,6 @@ spring:
       hibernate:
         format_sql: true
 
-  # ATIVAÇÃO DO FLYWAY (Mapeamento de Versionamento de Banco)
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -28,9 +26,9 @@ server:
 
 sentinel:
   security:
-    crypto-key: "YTM0N2M5ZjgxYjIyYzM0ZDVkNmU3YThmOTBlYTIxY2Q="
+    # Busca no SO a chave AES. Se não achar, usa a sua chave atual como fallback local
+    crypto-key: ${SENTINEL_CRYPTO_KEY:YTM0N2M5ZjgxYjIyYzM0ZDVkNmU3YThmOTBlYTIxY2Q=}
     jwt:
-      # Chave secreta de 256 bits codificada em Base64 para assinatura dos tokens
-      secret: "dGhpcy1pcy1hLXN1cGVyLXNlY3VyZS1hbmQtb25lLW9mLWEta2luZC1zZWNyZXQta2V5LTI1Ni1iaXRz"
-      # Tempo de validade do token em milissegundos (Ex: 3600000 ms = 1 hora)
+      # Busca no SO o segredo do JWT. Se não achar, usa o fallback local
+      secret: ${SENTINEL_JWT_SECRET:dGhpcy1pcy1hLXN1cGVyLXNlY3VyZS1hbmQtb25lLW9mLWEta2luZC1zZWNyZXQta2V5LTI1Ni1iaXRz}
       expiration: 3600000
