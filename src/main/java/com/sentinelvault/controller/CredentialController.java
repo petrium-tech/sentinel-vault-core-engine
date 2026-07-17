@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID; // IMPORT CORRETO ADICIONADO AQUI
 
 @RestController
 @RequestMapping("/api/credentials")
@@ -25,7 +26,7 @@ public class CredentialController {
     @PostMapping
     public ResponseEntity<CredentialResponse> create(
             @Valid @RequestBody CredentialRegistrationRequest request,
-            @AuthenticationPrincipal String userEmail) { // Injeção automática via Spring Security
+            @AuthenticationPrincipal String userEmail) {
 
         CredentialEntity savedEntity = credentialService.registerCredential(
                 request.getName(),
@@ -40,7 +41,7 @@ public class CredentialController {
                 savedEntity.getName(),
                 savedEntity.getServiceUrl(),
                 savedEntity.getUsernamePayload(),
-                request.getPasswordPayload() // Retorna o texto aberto confirmado no ato da criação
+                request.getPasswordPayload()
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -56,10 +57,16 @@ public class CredentialController {
                         entity.getName(),
                         entity.getServiceUrl(),
                         entity.getUsernamePayload(),
-                        entity.getPasswordPayload() // Dado descriptografado on-the-fly
+                        entity.getPasswordPayload()
                 ))
                 .toList();
 
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable UUID id, @AuthenticationPrincipal String userEmail) {
+        credentialService.deleteCredential(id, userEmail);
+        return ResponseEntity.noContent().build();
     }
 }
