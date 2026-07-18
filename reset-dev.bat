@@ -1,0 +1,9 @@
+@echo off
+echo [1/3] Destruindo containers e volumes antigos...
+docker compose down -v
+
+echo [2/3] Subindo banco de dados limpo...
+docker compose up -d
+
+echo [3/3] Compilando e iniciando a Fortaleza Sentinel Vault...
+.\mvnw.cmd spring-boot:run
