@@ -32,3 +32,16 @@ sentinel:
       # Busca no SO o segredo do JWT. Se não achar, usa o fallback local
       secret: ${SENTINEL_JWT_SECRET:dGhpcy1pcy1hLXN1cGVyLXNlY3VyZS1hbmQtb25lLW9mLWEta2luZC1zZWNyZXQta2V5LTI1Ni1iaXRz}
       expiration: 3600000
+
+# DevSecOps: Monitoramento e Observabilidade com Actuator e Micrometer
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,prometheus"
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
