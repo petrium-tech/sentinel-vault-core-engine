@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
@@ -23,9 +24,11 @@ import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 public class SecurityConfig {
 
     private final JwtService jwtService;
+    private final JwtDecoder jwtDecoder;
 
-    public SecurityConfig(JwtService jwtService) {
+    public SecurityConfig(JwtService jwtService, JwtDecoder jwtDecoder) {
         this.jwtService = jwtService;
+        this.jwtDecoder = jwtDecoder;
     }
 
     @Bean
@@ -60,6 +63,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
+
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder)))
 
                 .formLogin(Customizer.withDefaults())
 
