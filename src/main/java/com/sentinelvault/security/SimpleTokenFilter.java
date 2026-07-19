@@ -15,9 +15,17 @@ public class SimpleTokenFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
 
-    // Construtor recebendo o JwtService para validação criptográfica
     public SimpleTokenFilter(JwtService jwtService) {
         this.jwtService = jwtService;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getServletPath();
+        return path.startsWith("/oauth2/") ||
+                path.startsWith("/connect/") ||
+                path.equals("/login") ||
+                path.equals("/api/auth/login");
     }
 
     @Override
@@ -29,11 +37,9 @@ public class SimpleTokenFilter extends OncePerRequestFilter {
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7); // Isola o token real
 
-            // Validação criptográfica de assinatura e expiração do JWT real!
             if (jwtService.isTokenValid(token)) {
                 String email = jwtService.extractEmail(token);
 
-                // Define o contexto de autenticação do Spring Security com o usuário real extraído
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         email, null, Collections.emptyList()
                 );

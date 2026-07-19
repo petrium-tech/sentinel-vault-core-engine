@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
@@ -38,6 +39,12 @@ import java.util.UUID;
 @EnableWebSecurity
 public class AuthorizationServerConfig {
 
+    private final PasswordEncoder passwordEncoder;
+
+    public AuthorizationServerConfig(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
+    }
+
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain authServerSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -59,24 +66,21 @@ public class AuthorizationServerConfig {
     }
 
     /**
-     * DevSecOps: Registro de Clientes OAuth 2.0 (Em memória para Dev Local)
-     * Configura o sentinel-client para exigir o fluxo seguro do PKCE.
+     * DevSecOps: Registro de Clientes OAuth 2.0 (Estabilizado em Memória)
      */
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
-        RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+        RegisteredClient registeredClient = RegisteredClient.withId("sentinel-client")
                 .clientId("sentinel-client")
-                // No PKCE real de aplicativos móveis/frontends, não usamos senha (secret) exposta
-                .clientSecret("{noop}sentinel-secret-key-123")
+                .clientSecret(passwordEncoder.encode("sentinel-secret-key-123"))
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                // Redirecionamentos padrão aceitos para homologação local do fluxo
                 .redirectUri("http://127.0.0.1:8080/login/oauth2/code/sentinel-client")
                 .scope(OidcScopes.OPENID)
-                .scope(OidcScopes.PROFILE)
-                // Força explicitamente a necessidade do desafio PKCE para este cliente
-                .clientSettings(ClientSettings.builder().requireProofKey(true).build())
+                .clientSettings(ClientSettings.builder()
+                        .requireProofKey(true)
+                        .build())
                 .build();
 
         return new InMemoryRegisteredClientRepository(registeredClient);
@@ -101,7 +105,7 @@ public class AuthorizationServerConfig {
         KeyPair keyPair;
         try {
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-            keyPairGenerator.initialize(2048); // Força chaves seguras de 2048 bits
+            keyPairGenerator.initialize(2048);
             keyPair = keyPairGenerator.generateKeyPair();
         } catch (Exception ex) {
             throw new IllegalStateException("Falha ao gerar chaves criptográficas RSA", ex);
