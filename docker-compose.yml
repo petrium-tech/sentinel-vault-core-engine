@@ -1,15 +1,43 @@
 services:
+  # =========================================================================
+  # BANCO DE DADOS: POSTGRESQL
+  # =========================================================================
   postgres:
     image: postgres:16-alpine
     container_name: sentinel-postgres
     ports:
-      - "5439:5432"  # Porta 5439 no Windows mapeia para a 5432 interna do contêiner
+      - "5439:5432"
     environment:
       POSTGRES_DB: sentineldb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sentineldb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =========================================================================
+  # APLICATIVO: SENTINEL VAULT CORE ENGINE (API REST)
+  # =========================================================================
+  sentinel-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sentinel-vault-core
+    ports:
+      - "9090:9090"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/sentineldb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SENTINEL_CRYPTO_KEY=YTM0N2M5ZjgxYjIyYzM0ZDVkNmU3YThmOTBlYTIxY2Q=
+      - SENTINEL_JWT_SECRET=dGhpcy1pcy1hLXN1cGVyLXNlY3VyZS1hbmQtb25lLW9mLWEta2luZC1zZWNyZXQta2V5LTI1Ni1iaXRz
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
