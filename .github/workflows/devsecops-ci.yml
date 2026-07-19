@@ -24,7 +24,7 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # Step 3: DevSecOps - Secret Scanning preventivo para caçar vazamentos de chaves
+      # Step 3: DevSecOps - Secret Scanning preventivo contra vazamento de chaves
       - name: DevSecOps - Scan for Hardcoded Secrets
         uses: trufflesecurity/trufflehog@main
         with:
@@ -36,6 +36,22 @@ jobs:
       - name: Build Application Package
         run: mvn clean compile
 
-      # Step 5: Execução Automática da Suíte de Testes Unitários Isolados com Mockito
+      # Step 5: Execução Automática da Suíte de Testes Unitários Isolados
       - name: Run Automated Unit Tests
         run: mvn test
+
+      # Step 6: DevSecOps (SAST) - Análise Estática com Semgrep procurando falhas no código Java
+      - name: DevSecOps - SAST Static Code Analysis (Semgrep)
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/src" returntocorp/semgrep semgrep ci \
+            --config=p/owasp-top-10 \
+            --config=p/java \
+            --error
+
+      # Step 7: DevSecOps (SCA) - Varredura de dependências vulneráveis no pom.xml
+      - name: DevSecOps - SCA Dependency Vulnerability Scan (Snyk)
+        uses: snyk/actions/maven@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
