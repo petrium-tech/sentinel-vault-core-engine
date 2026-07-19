@@ -10,8 +10,6 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
@@ -26,14 +24,10 @@ public class SecurityConfig {
     private final JwtService jwtService;
     private final JwtDecoder jwtDecoder;
 
+    // Injeção limpa via construtor do JwtService e do JwtDecoder assíncrono RSA
     public SecurityConfig(JwtService jwtService, JwtDecoder jwtDecoder) {
         this.jwtService = jwtService;
         this.jwtDecoder = jwtDecoder;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 
     @Bean
@@ -64,6 +58,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
+                // Ativa o suporte nativo a Resource Server para validar tokens via Chave Pública RSA
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder)))
 
                 .formLogin(Customizer.withDefaults())
