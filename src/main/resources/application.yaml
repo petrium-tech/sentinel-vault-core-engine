@@ -3,13 +3,13 @@ spring:
     name: sentinel-vault
 
   datasource:
-    url: jdbc:postgresql://localhost:5439/sentineldb
-    username: postgres
-    password: postgres
+    # Tenta conectar via rede interna do Docker (postgres:5432). Se rodar local fora do Docker, cai no fallback (localhost:5439)
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5439/sentineldb}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: validate
     show-sql: true
@@ -33,7 +33,9 @@ sentinel:
       secret: ${SENTINEL_JWT_SECRET:dGhpcy1pcy1hLXN1cGVyLXNlY3VyZS1hbmQtb25lLW9mLWEta2luZC1zZWNyZXQta2V5LTI1Ni1iaXRz}
       expiration: 3600000
 
-# DevSecOps: Monitoramento e Observabilidade com Actuator e Micrometer
+# =========================================================================
+# DEVSECOPS: MONITORAMENTO E OBSERVABILIDADE COM ACTUATOR E MICROMETER
+# =========================================================================
 management:
   endpoints:
     web:
@@ -42,6 +44,8 @@ management:
   endpoint:
     health:
       show-details: always
+    prometheus:
+      enabled: true
   metrics:
     tags:
       application: ${spring.application.name}
