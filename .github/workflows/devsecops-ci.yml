@@ -1,0 +1,41 @@
+name: Sentinel Vault - Core Engine DevSecOps CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    name: 🛡️ Compile and Verify Security
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Resgata o código-fonte do repositório
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # Step 2: Configura o ecossistema com Java 21 oficial da JDK
+      - name: Setup Java 21 JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # Step 3: DevSecOps - Secret Scanning preventivo para caçar vazamentos de chaves
+      - name: DevSecOps - Scan for Hardcoded Secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          base: ""
+          head: ${{ github.ref_name }}
+          extra_args: --only-verified
+
+      # Step 4: Compilação Completa e Resolução de Dependências do Maven
+      - name: Build Application Package
+        run: mvn clean compile
+
+      # Step 5: Execução Automática da Suíte de Testes Unitários Isolados com Mockito
+      - name: Run Automated Unit Tests
+        run: mvn test
