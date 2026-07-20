@@ -20,6 +20,7 @@ The **Sentinel Vault Core Engine** is a professional-grade cryptographic infrast
 * **Stateless Token-Based Security:** Fully powered by OAuth 2.1 protocol with PKCE flow and asynchronous RSA-2048 public/private key verification.
 * **Logical Multi-Tenancy & Isolation:** Rigid security constraints tying database lookups directly to the authenticated user's UUID to neutralize Broken Object Level Authorization (BOLA) risks.
 * **Immutable Security Auditing:** Captures precise, non-repudiable logs of *who*, *when*, *from which IP*, and *what action* was taken against any secret.
+> 💡 **Deep Dive:** For a complete breakdown of the development history, structural refactoring, and corporate design choices, read our full [Engineering Journey & Architectural Decisions Document](docs/engineering-journey.md).
 
 ---
 
@@ -76,6 +77,7 @@ O **Sentinel Vault Core Engine** é um motor de infraestrutura criptográfica de
 * **Segurança Stateless baseada em Tokens:** Alimentado pelo protocolo OAuth 2.1 com fluxo PKCE e verificação assíncrona de chaves públicas/privadas RSA-2048.
 * **Isolamento Multi-Tenant Lógico:** Restrições rígidas atrelando consultas ao banco de dados diretamente ao UUID do usuário autenticado para neutralizar riscos de *Broken Object Level Authorization (BOLA)*.
 * **Auditoria de Segurança Imutável:** Captura logs precisos e irrefutáveis de *quem*, *quando*, *a partir de qual IP* e *qual ação* foi executada contra qualquer segredo.
+> 💡 **Mergulho Profundo:** Para uma análise completa do histórico de desenvolvimento, refatorações estruturais e escolhas corporativas de design, leia nossa [Documentação Completa de Jornada de Engenharia e Decisões Arquiteturais](docs/jornada-engenharia.md).
 
 ---
 
