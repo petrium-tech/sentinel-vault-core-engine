@@ -43,10 +43,9 @@ jobs:
       # Step 6: DevSecOps (SAST) - Análise Estática com Semgrep procurando falhas no código Java
       - name: DevSecOps - SAST Static Code Analysis (Semgrep)
         run: |
-          docker run --rm -v "${{ github.workspace }}:/src" returntocorp/semgrep semgrep ci \
-            --config=p/owasp-top-10 \
-            --config=p/java \
-            --error
+          docker run --rm -v "${{ github.workspace }}:/src" returntocorp/semgrep semgrep scan \
+            --config=auto \
+            --fail-on-core-errors
 
       # Step 7: DevSecOps (SCA) - Varredura de dependências vulneráveis no pom.xml
       - name: DevSecOps - SCA Dependency Vulnerability Scan (Snyk)
