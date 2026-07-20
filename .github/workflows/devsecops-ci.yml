@@ -45,7 +45,7 @@ jobs:
         run: |
           docker run --rm -v "${{ github.workspace }}:/src" returntocorp/semgrep semgrep scan \
             --config=auto \
-            --fail-on-core-errors
+            --error
 
       # Step 7: DevSecOps (SCA) - Varredura de dependências vulneráveis no pom.xml
       - name: DevSecOps - SCA Dependency Vulnerability Scan (Snyk)
