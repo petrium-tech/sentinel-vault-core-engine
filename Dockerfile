@@ -1,26 +1,22 @@
-# =========================================================================
-# ESTÁGIO 1: COMPILAÇÃO (BUILD ENGINE)
-# =========================================================================
-FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
-WORKDIR /build
-
+# Multi-stage Build: Estágio 1 - Compilação
+FROM maven:3.9.9-eclipse-temurin-21-alpine AS builder
+WORKDIR /app
 COPY pom.xml .
-RUN mvn dependency:go-offline
-
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-# =========================================================================
-# ESTÁGIO 2: EXECUÇÃO (RUNTIME BLINDADO)
-# =========================================================================
+# Estágio 2 - Imagem Final Executável
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# DevSecOps: Usuário de sistema não-privilegiado (Least Privilege)
+# Atualiza os pacotes do sistema operacional Linux Alpine para aplicar patches de segurança recentes
+RUN apk update && apk upgrade --no-cache
+
+# Cria um usuário não-root por questões de segurança (Princípio de Menor Privilégio)
 RUN addgroup -S sentinelgroup && adduser -S sentineluser -G sentinelgroup
 USER sentineluser
 
-COPY --from=builder /build/target/sentinel-vault-*.jar app.jar
+COPY --from=builder /app/target/*.jar app.jar
 
 EXPOSE 9090
 
