@@ -11,7 +11,6 @@ jobs:
     name: 🛡️ DevSecOps Quality & Security Gate
     runs-on: ubuntu-latest
 
-    # Variáveis de ambiente dinâmicas alimentadas estritamente por GitHub Secrets
     env:
       SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb
       SPRING_DATASOURCE_USERNAME: sa
@@ -20,13 +19,13 @@ jobs:
       SENTINEL_JWT_SECRET: ${{ secrets.SENTINEL_JWT_SECRET }}
 
     steps:
-      # Step 1: Checkout do Código-Fonte
+      # Step 1: Resgata o código-fonte
       - name: 1. Checkout Source Code
         uses: actions/checkout@v4
 
-      # Step 2: DevSecOps (Secret Scanning) - TruffleHog Roda ANTES de Qualquer Build
+      # Step 2: Secret Scanning (TruffleHog com tag de versão fixa)
       - name: 2. Secret Scanning (TruffleHog)
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.88.15
         with:
           base: ""
           head: ${{ github.ref_name }}
@@ -44,11 +43,11 @@ jobs:
       - name: 4. Compile Application
         run: mvn clean compile
 
-      # Step 5: Suíte de Testes Unitários Isolados
+      # Step 5: Suíte de Testes Unitários
       - name: 5. Run Automated Unit Tests
         run: mvn test
 
-      # Step 6: DevSecOps (SAST) - Análise Estática com Semgrep via Docker
+      # Step 6: SAST - Análise Estática com Semgrep via Docker (Usa o JAVA_HOME e o código compilado)
       - name: 6. DevSecOps - SAST Static Code Analysis (Semgrep)
         run: |
           docker run --rm \
@@ -58,21 +57,25 @@ jobs:
             semgrep scan \
             --config=auto
 
-      # Step 7: DevSecOps (SCA) - Varredura de Dependências com Snyk
-      - name: 7. SCA - Dependency Scan (Snyk)
-        uses: snyk/actions/maven@master
+      # Step 7.1: Instala a CLI do Snyk diretamente no runner do GitHub
+      - name: 7.1 Install Snyk CLI
+        uses: snyk/actions/setup@v0.4.0
+
+      # Step 7.2: SCA - Varredura de Dependências usando a CLI do Snyk no contexto com JAVA_HOME
+      - name: 7.2 SCA - Dependency Scan (Snyk CLI)
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high
+        run: |
+          snyk auth $SNYK_TOKEN
+          snyk test --severity-threshold=high
 
-      # Step 8: Build da Imagem Docker Multi-Stage
+      # Step 8: Build da Imagem Docker
       - name: 8. Build Docker Image
         run: docker build -t sentinel-vault:latest .
 
-      # Step 9: DevSecOps - Análise Severa de Vulnerabilidades na Imagem Docker (Trivy)
+      # Step 9: Container Security Scan (Trivy com tag de versão fixa)
       - name: 9. Container Scan (Trivy)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.29.0
         with:
           image-ref: 'sentinel-vault:latest'
           format: 'table'
