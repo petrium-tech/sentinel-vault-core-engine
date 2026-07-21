@@ -3,10 +3,9 @@ spring:
     name: sentinel-vault
 
   datasource:
-    # Tenta conectar via rede interna do Docker (postgres:5432). Se rodar local fora do Docker, cai no fallback (localhost:5439)
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5439/sentineldb}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -26,16 +25,11 @@ server:
 
 sentinel:
   security:
-    # Busca no SO a chave AES. Se não achar, usa a sua chave atual como fallback local
-    crypto-key: ${SENTINEL_CRYPTO_KEY:YTM0N2M5ZjgxYjIyYzM0ZDVkNmU3YThmOTBlYTIxY2Q=}
+    crypto-key: ${SENTINEL_CRYPTO_KEY}
     jwt:
-      # Busca no SO o segredo do JWT. Se não achar, usa o fallback local
-      secret: ${SENTINEL_JWT_SECRET:dGhpcy1pcy1hLXN1cGVyLXNlY3VyZS1hbmQtb25lLW9mLWEta2luZC1zZWNyZXQta2V5LTI1Ni1iaXRz}
-      expiration: 3600000
+      secret: ${SENTINEL_JWT_SECRET}
+      expiration: ${SENTINEL_JWT_EXPIRATION:3600000}
 
-# =========================================================================
-# DEVSECOPS: MONITORAMENTO E OBSERVABILIDADE COM ACTUATOR E MICROMETER
-# =========================================================================
 management:
   endpoints:
     web:
