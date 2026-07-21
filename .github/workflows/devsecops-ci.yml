@@ -57,17 +57,18 @@ jobs:
             semgrep scan \
             --config=auto
 
-      # Step 7.1: Instala a CLI do Snyk diretamente no runner do GitHub
+      # Step 7.1: Instala a CLI do Snyk no runner do GitHub
       - name: 7.1 Install Snyk CLI
         uses: snyk/actions/setup@master
 
-      # Step 7.2: SCA - Varredura de Dependências usando a CLI do Snyk no contexto nativo
-      - name: 7.2 SCA - Dependency Scan (Snyk CLI)
+      # Step 7.2: SCA - Dependency Scan & Continuous Monitoring (Snyk CLI)
+      - name: 7.2 SCA - Dependency Scan & Continuous Monitoring (Snyk CLI)
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           snyk auth $SNYK_TOKEN
-          snyk test --severity-threshold=high
+          snyk test --severity-threshold=critical
+          snyk monitor
 
       # Step 8: Build da Imagem Docker
       - name: 8. Build Docker Image
