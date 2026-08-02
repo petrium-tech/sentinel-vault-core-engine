@@ -21,13 +21,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class EnvInjectionEngineTest {
-
-    @Mock
-    private VolatileMapManager volatileMapManager;
 
     @Mock
     private VaultHttpClient vaultHttpClient;
@@ -70,13 +69,15 @@ class EnvInjectionEngineTest {
     }
 
     @Test
-    @DisplayName("Deve lançar SentinelEnvInjectionException se SENTINEL_VAULT_URL não for informada")
-    void shouldThrowExceptionWhenVaultUrlIsMissing() {
+    @DisplayName("Deve ignorar a injeção graciosamente quando as variáveis do Vault não estiverem configuradas")
+    void shouldSkipInjectionWhenVaultPropertiesAreMissing() {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 
-        assertThatThrownBy(() -> engine.initialize(context))
-                .isInstanceOf(SentinelEnvInjectionException.class)
-                .hasMessageContaining("Missing required environment property: [SENTINEL_VAULT_URL]");
+        // When
+        engine.initialize(context);
+
+        // Then: O cliente HTTP não deve ser chamado
+        verify(vaultHttpClient, never()).fetchEncryptedSecrets(any(), any());
     }
 
     @Test

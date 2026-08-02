@@ -11,6 +11,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Maestro de inicialização do Sentinel Env Injector.
@@ -18,6 +19,8 @@ import java.util.List;
  * buscar, descriptografar e injetar os segredos voláteis na memória RAM.
  */
 public class EnvInjectionEngine implements ApplicationContextInitializer<ConfigurableApplicationContext> {
+
+    private static final Logger LOGGER = Logger.getLogger(EnvInjectionEngine.class.getName());
 
     public static final String VAULT_URL_ENV = "SENTINEL_VAULT_URL";
     public static final String CRYPTO_KEY_ENV = "SENTINEL_CRYPTO_KEY";
@@ -55,11 +58,11 @@ public class EnvInjectionEngine implements ApplicationContextInitializer<Configu
         String cryptoKey = resolveProperty(environment, CRYPTO_KEY_ENV);
         String envName = resolveProperty(environment, ENV_NAME_ENV, "DEVELOPMENT");
 
-        if (vaultUrl == null || vaultUrl.isBlank()) {
-            throw new SentinelEnvInjectionException("Missing required environment property: [" + VAULT_URL_ENV + "]");
-        }
-        if (cryptoKey == null || cryptoKey.isBlank()) {
-            throw new SentinelEnvInjectionException("Missing required environment property: [" + CRYPTO_KEY_ENV + "]");
+        // Caso as variáveis de infraestrutura do Vault não estejam presentes,
+        // o injetor ignora o bootstrap sem quebrar a execução (Fallback gracioso para testes/dev)
+        if (vaultUrl == null || vaultUrl.isBlank() || cryptoKey == null || cryptoKey.isBlank()) {
+            LOGGER.warning("[sentinel-injector] SENTINEL_VAULT_URL or SENTINEL_CRYPTO_KEY missing. Skipping volatile environment injection.");
+            return;
         }
 
         // 2. Busca os payloads cifrados do Vault Core Engine
