@@ -1,0 +1,3 @@
+# Auto-detecção do Sentinel Env Injector no bootstrap do Spring
+org.springframework.context.ApplicationContextInitializer=\
+  com.sentinelvault.injector.core.EnvInjectionEngine

@@ -60,9 +60,6 @@ public class VolatileMapManager {
         propertySources.addFirst(volatilePropertySource);
     }
 
-    /**
-     * Valida se a chave não pertence à lista de propriedades proibidas do sistema.
-     */
     private boolean isAllowedKey(String key) {
         return key != null && !key.isBlank() && !FORBIDDEN_KEYS.contains(key.toUpperCase());
     }
