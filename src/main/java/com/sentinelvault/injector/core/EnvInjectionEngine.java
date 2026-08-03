@@ -5,13 +5,13 @@ import com.sentinelvault.injector.domain.EncryptedSecretPayload;
 import com.sentinelvault.injector.domain.InjectedPropertyBatch;
 import com.sentinelvault.injector.domain.VaultSecretEntry;
 import com.sentinelvault.injector.http.VaultHttpClient;
+import com.sentinelvault.injector.telemetry.SentinelTelemetryLogger;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Maestro de inicialização do Sentinel Env Injector.
@@ -19,8 +19,6 @@ import java.util.logging.Logger;
  * buscar, descriptografar e injetar os segredos voláteis na memória RAM.
  */
 public class EnvInjectionEngine implements ApplicationContextInitializer<ConfigurableApplicationContext> {
-
-    private static final Logger LOGGER = Logger.getLogger(EnvInjectionEngine.class.getName());
 
     public static final String VAULT_URL_ENV = "SENTINEL_VAULT_URL";
     public static final String CRYPTO_KEY_ENV = "SENTINEL_CRYPTO_KEY";
@@ -51,6 +49,7 @@ public class EnvInjectionEngine implements ApplicationContextInitializer<Configu
             throw new SentinelEnvInjectionException("ApplicationContext cannot be null during bootstrap initialization");
         }
 
+        long startTime = System.currentTimeMillis();
         ConfigurableEnvironment environment = applicationContext.getEnvironment();
 
         // 1. Resolve as variáveis mínimas do bootstrap
@@ -58,12 +57,12 @@ public class EnvInjectionEngine implements ApplicationContextInitializer<Configu
         String cryptoKey = resolveProperty(environment, CRYPTO_KEY_ENV);
         String envName = resolveProperty(environment, ENV_NAME_ENV, "DEVELOPMENT");
 
-        // Caso as variáveis de infraestrutura do Vault não estejam presentes,
-        // o injetor ignora o bootstrap sem quebrar a execução (Fallback gracioso para testes/dev)
         if (vaultUrl == null || vaultUrl.isBlank() || cryptoKey == null || cryptoKey.isBlank()) {
-            LOGGER.warning("[sentinel-injector] SENTINEL_VAULT_URL or SENTINEL_CRYPTO_KEY missing. Skipping volatile environment injection.");
+            SentinelTelemetryLogger.logSkipped("SENTINEL_VAULT_URL or SENTINEL_CRYPTO_KEY missing in environment.");
             return;
         }
+
+        SentinelTelemetryLogger.logStart(vaultUrl, envName);
 
         // 2. Busca os payloads cifrados do Vault Core Engine
         List<EncryptedSecretPayload> encryptedPayloads = vaultHttpClient.fetchEncryptedSecrets(vaultUrl, envName);
@@ -78,11 +77,11 @@ public class EnvInjectionEngine implements ApplicationContextInitializer<Configu
         // 4. Injeta as propriedades na posição de prioridade máxima da RAM (addFirst)
         InjectedPropertyBatch batch = new InjectedPropertyBatch(VolatileMapManager.PROPERTY_SOURCE_NAME, decryptedEntries);
         volatileMapManager.injectIntoEnvironment(environment, batch);
+
+        long executionTimeMs = System.currentTimeMillis() - startTime;
+        SentinelTelemetryLogger.logSuccess(decryptedEntries.size(), executionTimeMs);
     }
 
-    /**
-     * Tenta buscar a propriedade nas variáveis do sistema ou do SO.
-     */
     private String resolveProperty(ConfigurableEnvironment environment, String key) {
         return resolveProperty(environment, key, null);
     }
