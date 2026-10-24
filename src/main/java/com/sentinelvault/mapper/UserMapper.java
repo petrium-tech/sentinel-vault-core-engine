@@ -6,8 +6,9 @@ import com.sentinelvault.domain.model.User;
 import com.sentinelvault.repository.entity.UserEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface UserMapper {
 
     User toDomain(UserRegistrationRequest request);
