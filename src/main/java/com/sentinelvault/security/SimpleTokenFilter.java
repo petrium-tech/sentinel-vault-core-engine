@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -20,12 +21,11 @@ public class SimpleTokenFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+    protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.startsWith("/oauth2/") ||
-                path.startsWith("/connect/") ||
-                path.equals("/login") ||
-                path.equals("/api/auth/login");
+        return path.equals("/api/auth/login") ||
+                path.equals("/api/users") ||
+                path.startsWith("/actuator");
     }
 
     @Override
@@ -35,13 +35,13 @@ public class SimpleTokenFilter extends OncePerRequestFilter {
         String authorizationHeader = request.getHeader("Authorization");
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            String token = authorizationHeader.substring(7); // Isola o token real
+            String token = authorizationHeader.substring(7);
 
             if (jwtService.isTokenValid(token)) {
                 String email = jwtService.extractEmail(token);
 
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        email, null, Collections.emptyList()
+                        email, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
                 );
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
