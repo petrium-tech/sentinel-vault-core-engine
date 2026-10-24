@@ -8,6 +8,7 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
 
@@ -34,7 +35,7 @@ public class CryptoService {
     }
 
     /**
-     * Criptografa um texto puro usando AES-256-GCM.
+     * Criptografa um texto puro usando AES-256-GCM com charset UTF-8 estrito.
      * O IV é gerado de forma aleatória e concatenado junto ao texto cifrado.
      */
     public String encrypt(String plainText) {
@@ -50,8 +51,8 @@ public class CryptoService {
             SecretKeySpec keySpec = new SecretKeySpec(secretKey, "AES");
             cipher.init(Cipher.ENCRYPT_MODE, keySpec, spec);
 
-            // 3. Executar a criptografia do payload
-            byte[] cipherText = cipher.doFinal(plainText.getBytes());
+            // 3. Executar a criptografia do payload garantindo codificação UTF-8
+            byte[] cipherText = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
 
             // 4. Concatenar o IV e o Texto Cifrado em um único array de bytes para armazenamento fácil
             byte[] ivAndCipherText = ByteBuffer.allocate(iv.length + cipherText.length)
@@ -68,7 +69,7 @@ public class CryptoService {
     }
 
     /**
-     * Descriptografa um texto Base64 usando AES-256-GCM.
+     * Descriptografa um texto Base64 usando AES-256-GCM com decodificação UTF-8 estrita.
      * Extrai o IV embutido nos primeiros 12 bytes do array para descriptografar o restante do payload.
      */
     public String decrypt(String encryptedTextBase64) {
@@ -92,9 +93,9 @@ public class CryptoService {
             SecretKeySpec keySpec = new SecretKeySpec(secretKey, "AES");
             cipher.init(Cipher.DECRYPT_MODE, keySpec, spec);
 
-            // 5. Decifrar os bytes e retornar como string
+            // 5. Decifrar os bytes e retornar como string UTF-8
             byte[] decryptedTextBytes = cipher.doFinal(cipherText);
-            return new String(decryptedTextBytes);
+            return new String(decryptedTextBytes, StandardCharsets.UTF_8);
 
         } catch (Exception e) {
             throw new BusinessException("Decryption error: " + e.getMessage());
