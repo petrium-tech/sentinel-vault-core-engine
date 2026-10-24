@@ -1,5 +1,6 @@
 package com.sentinelvault.domain.service;
 
+import com.sentinelvault.controller.dto.CredentialRevealResponse;
 import com.sentinelvault.domain.exception.BusinessException;
 import com.sentinelvault.repository.CredentialAuditLogRepository;
 import com.sentinelvault.repository.CredentialRepository;
@@ -54,22 +55,36 @@ public class CredentialService {
         return savedCredential;
     }
 
+    @Transactional(readOnly = true)
+    public Page<CredentialEntity> findCredentialsByUserEmail(String userEmail, Pageable pageable) {
+        UserEntity user = getUserOrThrow(userEmail, "User not found.");
+        return credentialRepository.findByUserId(user.getId(), pageable);
+    }
+
     @Transactional
-    public Page<CredentialEntity> findCredentialsByUserEmail(String userEmail, Pageable pageable,
-                                                             String ipAddress, String userAgent) {
+    public CredentialRevealResponse revealCredential(UUID credentialId, String userEmail, String ipAddress, String userAgent) {
         UserEntity user = getUserOrThrow(userEmail, "User not found.");
 
-        Page<CredentialEntity> credentialsPage = credentialRepository.findByUserId(user.getId(), pageable);
+        CredentialEntity credential = credentialRepository.findById(credentialId)
+                .orElseThrow(() -> new BusinessException("Credential not found or already deleted."));
 
-        credentialsPage.forEach(entity -> {
-            String decryptedPassword = cryptoService.decrypt(entity.getPasswordPayload());
-            entity.setPasswordPayload(decryptedPassword);
+        // Proteção contra Broken Object Level Authorization (BOLA)
+        if (!credential.getUser().getId().equals(user.getId())) {
+            throw new BusinessException("You do not have permission to access this credential.");
+        }
 
-            // DevSecOps: Rastro persistente de descriptografia em lote
-            logAudit(entity.getId(), user.getId(), "READ_DECRYPT", ipAddress, userAgent);
-        });
+        String decryptedPassword = cryptoService.decrypt(credential.getPasswordPayload());
 
-        return credentialsPage;
+        // DevSecOps: Auditoria atômica e pontual de revelação de segredo
+        logAudit(credential.getId(), user.getId(), "REVEAL_SECRET", ipAddress, userAgent);
+
+        return new CredentialRevealResponse(
+                credential.getId(),
+                credential.getName(),
+                credential.getServiceUrl(),
+                credential.getUsernamePayload(),
+                decryptedPassword
+        );
     }
 
     @Transactional

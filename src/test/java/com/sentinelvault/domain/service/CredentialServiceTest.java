@@ -1,5 +1,6 @@
 package com.sentinelvault.domain.service;
 
+import com.sentinelvault.controller.dto.CredentialRevealResponse;
 import com.sentinelvault.domain.exception.BusinessException;
 import com.sentinelvault.repository.CredentialAuditLogRepository;
 import com.sentinelvault.repository.CredentialRepository;
@@ -63,6 +64,8 @@ class CredentialServiceTest {
         credential = new CredentialEntity();
         credential.setId(UUID.randomUUID());
         credential.setName("AWS key");
+        credential.setServiceUrl("https://aws.amazon.com");
+        credential.setUsernamePayload("lucas.admin");
         credential.setPasswordPayload("encryptedSecret");
         credential.setUser(user);
     }
@@ -100,20 +103,59 @@ class CredentialServiceTest {
     }
 
     @Test
-    void shouldFindCredentialsByUserEmailSuccessfully() {
+    void shouldFindCredentialsByUserEmailWithoutMutatingEntitiesOrDecrypting() {
         Pageable pageable = PageRequest.of(0, 2);
         Page<CredentialEntity> page = new PageImpl<>(Collections.singletonList(credential), pageable, 1);
 
         when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
         when(credentialRepository.findByUserId(user.getId(), pageable)).thenReturn(page);
-        when(cryptoService.decrypt("encryptedSecret")).thenReturn("rawPassword");
 
-        Page<CredentialEntity> result = credentialService.findCredentialsByUserEmail(userEmail, pageable, ipAddress, userAgent);
+        Page<CredentialEntity> result = credentialService.findCredentialsByUserEmail(userEmail, pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
-        assertEquals("rawPassword", result.getContent().get(0).getPasswordPayload());
+        // Garante que o payload permanece criptografado na listagem de metadados
+        assertEquals("encryptedSecret", result.getContent().get(0).getPasswordPayload());
+        // Garante que a criptografia não foi acionada e nenhum log em lote foi criado
+        verify(cryptoService, never()).decrypt(any());
+        verify(auditLogRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldRevealCredentialSuccessfully() {
+        UUID credentialId = credential.getId();
+        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(credentialRepository.findById(credentialId)).thenReturn(Optional.of(credential));
+        when(cryptoService.decrypt("encryptedSecret")).thenReturn("superSecretDecryptedPassword");
+
+        CredentialRevealResponse response = credentialService.revealCredential(credentialId, userEmail, ipAddress, userAgent);
+
+        assertNotNull(response);
+        assertEquals(credentialId, response.getId());
+        assertEquals("superSecretDecryptedPassword", response.getDecryptedPassword());
         verify(auditLogRepository, times(1)).save(any(CredentialAuditLogEntity.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenRevealingCredentialOfAnotherUser() {
+        UUID credentialId = credential.getId();
+
+        UserEntity alternativeUser = new UserEntity();
+        alternativeUser.setId(UUID.randomUUID());
+        alternativeUser.setEmail("attacker@email.com");
+
+        credential.setUser(alternativeUser);
+
+        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(credentialRepository.findById(credentialId)).thenReturn(Optional.of(credential));
+
+        BusinessException exception = assertThrows(BusinessException.class, () ->
+                credentialService.revealCredential(credentialId, userEmail, ipAddress, userAgent)
+        );
+
+        assertEquals("You do not have permission to access this credential.", exception.getMessage());
+        verify(cryptoService, never()).decrypt(any());
+        verify(auditLogRepository, never()).save(any());
     }
 
     @Test

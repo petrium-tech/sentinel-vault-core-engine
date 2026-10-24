@@ -2,9 +2,11 @@ package com.sentinelvault.controller;
 
 import com.sentinelvault.controller.dto.CredentialRegistrationRequest;
 import com.sentinelvault.controller.dto.CredentialResponse;
+import com.sentinelvault.controller.dto.CredentialRevealResponse;
+import com.sentinelvault.controller.dto.CredentialSummaryResponse;
 import com.sentinelvault.domain.service.CredentialService;
 import com.sentinelvault.repository.entity.CredentialEntity;
-import jakarta.servlet.http.HttpServletRequest; // IMPORT NECESSÁRIO ADICIONADO HERE
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,7 +33,6 @@ public class CredentialController {
             @AuthenticationPrincipal String userEmail,
             HttpServletRequest httpRequest) {
 
-        // Extração do IP e do User-Agent
         String ipAddress = httpRequest.getRemoteAddr();
         String userAgent = httpRequest.getHeader("User-Agent");
 
@@ -57,26 +58,33 @@ public class CredentialController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<CredentialResponse>> listCurrentUserCredentials(
+    public ResponseEntity<Page<CredentialSummaryResponse>> listCurrentUserCredentials(
             @AuthenticationPrincipal String userEmail,
-            Pageable pageable,
-            HttpServletRequest httpRequest) {
+            Pageable pageable) {
 
-        // Extração do IP e do User-Agent
-        String ipAddress = httpRequest.getRemoteAddr();
-        String userAgent = httpRequest.getHeader("User-Agent");
+        Page<CredentialEntity> credentialsPage = credentialService.findCredentialsByUserEmail(userEmail, pageable);
 
-        Page<CredentialEntity> credentialsPage = credentialService.findCredentialsByUserEmail(userEmail, pageable, ipAddress, userAgent);
-
-        Page<CredentialResponse> responsePage = credentialsPage.map(entity -> new CredentialResponse(
+        Page<CredentialSummaryResponse> summaryPage = credentialsPage.map(entity -> new CredentialSummaryResponse(
                 entity.getId(),
                 entity.getName(),
                 entity.getServiceUrl(),
-                entity.getUsernamePayload(),
-                entity.getPasswordPayload()
+                entity.getUsernamePayload()
         ));
 
-        return ResponseEntity.ok(responsePage);
+        return ResponseEntity.ok(summaryPage);
+    }
+
+    @GetMapping("/{id}/reveal")
+    public ResponseEntity<CredentialRevealResponse> reveal(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal String userEmail,
+            HttpServletRequest httpRequest) {
+
+        String ipAddress = httpRequest.getRemoteAddr();
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        CredentialRevealResponse response = credentialService.revealCredential(id, userEmail, ipAddress, userAgent);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
