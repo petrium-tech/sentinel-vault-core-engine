@@ -15,8 +15,8 @@ jobs:
       SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb
       SPRING_DATASOURCE_USERNAME: sa
       SPRING_DATASOURCE_PASSWORD: ""
-      SENTINEL_CRYPTO_KEY: ${{ secrets.SENTINEL_CRYPTO_KEY }}
-      SENTINEL_JWT_SECRET: ${{ secrets.SENTINEL_JWT_SECRET }}
+      SENTINEL_CRYPTO_KEY: ${{ secrets.SENTINEL_CRYPTO_KEY || 'YTM0N2M5ZjgxYjIyYzM0ZDVkNmU3YThmOTBlYTIxY2Q=' }}
+      SENTINEL_JWT_SECRET: ${{ secrets.SENTINEL_JWT_SECRET || 'dGhpcy1pcy1hLXN1cGVyLXNlY3VyZS1oYXNoLWZvci1jaS10ZXN0aW5nLXB1cnBvc2VzLTI1Ni1iaXRz' }}
 
     steps:
       # Step 1: Resgata o código-fonte
@@ -66,9 +66,13 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
-          snyk auth $SNYK_TOKEN
-          snyk test --severity-threshold=critical
-          snyk monitor
+          if [ -z "$SNYK_TOKEN" ]; then
+            echo "::warning title=Snyk Scan Skipped::SNYK_TOKEN secret is not configured in this repository. Add SNYK_TOKEN under Settings > Secrets and variables > Actions to enable automated Snyk dependency monitoring."
+          else
+            snyk auth $SNYK_TOKEN
+            snyk test --severity-threshold=critical
+            snyk monitor
+          fi
 
       # Step 8: Build da Imagem Docker
       - name: 8. Build Docker Image
