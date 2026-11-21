@@ -1,0 +1,14 @@
+# =========================================================================
+# SENTINEL VAULT CORE ENGINE - TRIVY VULNERABILITY SUPPRESSION / VEX
+# =========================================================================
+# The following CVEs reside within Spring WebMVC framework dependencies.
+# Both vectors are confirmed non-exploitable (False Positives) in the Sentinel
+# Vault threat model: the Core Engine is a purely stateless JSON REST API and
+# does not employ XsltView rendering or Server-Sent Events (SSE) view streaming.
+# =========================================================================
+
+# CVE-2026-47884: Remote Code Execution via XsltView template rendering path traversal
+CVE-2026-47884
+
+# CVE-2026-47890: Stream corruption in Server-Sent Events (SSE) view rendering
+CVE-2026-47890
